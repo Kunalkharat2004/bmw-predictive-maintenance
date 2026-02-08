@@ -3,7 +3,32 @@
  * Orchestrates the vehicle health monitoring interface
  */
 import React, { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { 
+  Box, 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  Button, 
+  CircularProgress, 
+  Alert,
+  Paper,
+  Fade,
+  Chip,
+  IconButton,
+  Tooltip,
+  useTheme
+} from '@mui/material';
+import { 
+  DirectionsCar as CarIcon, 
+  Analytics as AnalyticsIcon,
+  PlayArrow as PlayIcon,
+  Speed as SpeedIcon,
+  Memory as MemoryIcon,
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon
+} from '@mui/icons-material';
+
+import { useThemeMode } from '../context/ThemeContext';
 import TelemetryForm from './TelemetryForm';
 import KPICards from './KPICards';
 import ComponentHealth from './ComponentHealth';
@@ -12,8 +37,12 @@ import MaintenanceRecommendation from './MaintenanceRecommendation';
 import { predictVehicleHealth } from '../services/api';
 import { FEATURE_DEFINITIONS, convertToFeatures } from '../utils/helpers';
 
+const SIDEBAR_WIDTH = 380;
+
 const Dashboard = () => {
-  // Initialize with default values
+  const theme = useTheme();
+  const { mode, toggleTheme, isDark } = useThemeMode();
+
   const [telemetryValues, setTelemetryValues] = useState(() => {
     const defaults = {};
     FEATURE_DEFINITIONS.forEach(f => {
@@ -31,10 +60,7 @@ const Dashboard = () => {
     setError(null);
 
     try {
-      // Convert UI values to normalized features
       const features = convertToFeatures(telemetryValues);
-      
-      // Call API
       const result = await predictVehicleHealth(features);
       
       if (result.success) {
@@ -50,138 +76,325 @@ const Dashboard = () => {
     }
   };
 
+  // Dynamic colors based on theme
+  const colors = {
+    headerBg: isDark ? 'rgba(13, 17, 23, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+    headerBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    sidebarBg: isDark ? 'rgba(22, 27, 34, 0.98)' : '#ffffff',
+    sidebarBorder: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    contentBg: isDark ? '#0d1117' : '#f8fafc',
+    cardBg: isDark ? 'rgba(22, 27, 34, 0.6)' : 'rgba(255, 255, 255, 0.9)',
+    textPrimary: isDark ? '#ffffff' : '#0f172a',
+    textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#64748b',
+    scrollThumb: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+    emptyStateBg: isDark ? 'rgba(22, 27, 34, 0.6)' : 'rgba(255, 255, 255, 0.9)',
+    emptyStateBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: colors.contentBg }}>
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                🚗 BMW Vehicle Health Monitor
-              </h1>
-              <p className="text-blue-100 mt-1">
-                AI-Powered Predictive Maintenance Dashboard
-              </p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-              <p className="text-sm font-medium">Real-time Analysis</p>
-              <p className="text-xs text-blue-100">LSTM + Autoencoder</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppBar 
+        position="static" 
+        elevation={0}
+        sx={{ 
+          bgcolor: colors.headerBg,
+          borderBottom: `1px solid ${colors.headerBorder}`,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <Toolbar sx={{ py: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box 
+              sx={{ 
+                p: 1, 
+                borderRadius: 2, 
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                display: 'flex'
+              }}
+            >
+              <CarIcon sx={{ fontSize: 24, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight="700" color={colors.textPrimary} letterSpacing="-0.5px">
+                Vehicle Health Monitor
+              </Typography>
+              <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                Predictive Maintenance System
+              </Typography>
+            </Box>
+          </Box>
+          
+          <Box sx={{ flexGrow: 1 }} />
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Chip 
+              icon={<MemoryIcon sx={{ fontSize: 16 }} />}
+              label="LSTM + Autoencoder"
+              size="small"
+              sx={{ 
+                bgcolor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                color: '#3b82f6',
+                border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
+                fontWeight: 600,
+                fontSize: '0.7rem'
+              }}
+            />
+            <Chip 
+              icon={<SpeedIcon sx={{ fontSize: 16 }} />}
+              label="Real-time"
+              size="small"
+              sx={{ 
+                bgcolor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
+                color: isDark ? '#4ade80' : '#16a34a',
+                border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)'}`,
+                fontWeight: 600,
+                fontSize: '0.7rem'
+              }}
+            />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Telemetry Input */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-8">
-              <TelemetryForm
-                values={telemetryValues}
-                onChange={setTelemetryValues}
-              />
-
-              {/* Analyze Button */}
-              <button
-                onClick={handleAnalyze}
-                disabled={loading}
-                className={`w-full mt-6 py-4 px-6 rounded-xl font-bold text-white text-lg shadow-lg transition-all duration-300 ${
-                  loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:shadow-xl transform hover:-translate-y-0.5'
-                }`}
+            {/* Theme Toggle Button */}
+            <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              <IconButton 
+                onClick={toggleTheme}
+                sx={{ 
+                  ml: 1,
+                  bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                  color: isDark ? '#f59e0b' : '#6366f1',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                    transform: 'rotate(180deg)'
+                  }
+                }}
               >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Analyzing...
-                  </span>
-                ) : (
-                  '🔍 Analyze Vehicle Health'
-                )}
-              </button>
-            </div>
-          </div>
+                {isDark ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-          {/* Right Column - Results */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Main Content Area */}
+      <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+        {/* Left Sidebar - Telemetry Config */}
+        <Box 
+          sx={{ 
+            width: SIDEBAR_WIDTH, 
+            flexShrink: 0,
+            bgcolor: colors.sidebarBg,
+            borderRight: `1px solid ${colors.sidebarBorder}`,
+            display: 'flex',
+            flexDirection: 'column',
+            height: 'calc(100vh - 72px)'
+          }}
+        >
+          {/* Sidebar Header */}
+          <Box sx={{ p: 2.5, borderBottom: `1px solid ${colors.sidebarBorder}` }}>
+            <Typography variant="subtitle1" fontWeight="700" color={colors.textPrimary} sx={{ mb: 0.5 }}>
+              Telemetry Configuration
+            </Typography>
+            <Typography variant="caption" color={colors.textSecondary}>
+              Adjust vehicle parameters for analysis
+            </Typography>
+          </Box>
+          
+          {/* Scrollable Form Area */}
+          <Box 
+            sx={{ 
+              flexGrow: 1, 
+              overflowY: 'auto', 
+              p: 2,
+              '&::-webkit-scrollbar': { width: 6 },
+              '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+              '&::-webkit-scrollbar-thumb': { 
+                bgcolor: colors.scrollThumb, 
+                borderRadius: 3,
+                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }
+              }
+            }}
+          >
+            <TelemetryForm
+              values={telemetryValues}
+              onChange={setTelemetryValues}
+            />
+          </Box>
+
+          {/* Analyze Button */}
+          <Box sx={{ p: 2, borderTop: `1px solid ${colors.sidebarBorder}` }}>
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={handleAnalyze}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
+              sx={{ 
+                py: 1.5,
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                  boxShadow: '0 6px 20px rgba(59, 130, 246, 0.5)',
+                },
+                '&:disabled': {
+                  background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+                }
+              }}
+            >
+              {loading ? 'Analyzing...' : 'Run Analysis'}
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Right Content - Results */}
+        <Box 
+          sx={{ 
+            flexGrow: 1, 
+            overflowY: 'auto',
+            height: 'calc(100vh - 72px)',
+            bgcolor: colors.contentBg,
+            '&::-webkit-scrollbar': { width: 8 },
+            '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+            '&::-webkit-scrollbar-thumb': { 
+              bgcolor: colors.scrollThumb, 
+              borderRadius: 4,
+              '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }
+            }
+          }}
+        >
+          <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
             {/* Error Message */}
             {error && (
-              <div className="bg-red-100 border-2 border-red-300 rounded-xl p-4 text-red-800">
-                <p className="font-semibold">⚠️ Error</p>
-                <p className="text-sm">{error}</p>
-              </div>
+              <Alert 
+                severity="error" 
+                variant="filled" 
+                sx={{ mb: 3, borderRadius: 2 }}
+              >
+                {error}
+              </Alert>
             )}
 
-            {/* Executive Summary */}
+            {/* Empty State */}
             {!prediction && !loading && (
-              <div className="bg-white rounded-xl p-8 border-2 border-gray-200 text-center">
-                <div className="inline-block p-4 bg-blue-100 rounded-full mb-4">
-                  <svg
-                    className="h-12 w-12 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              <Fade in timeout={500}>
+                <Paper 
+                  sx={{ 
+                    p: 8, 
+                    textAlign: 'center', 
+                    borderRadius: 4,
+                    bgcolor: colors.emptyStateBg,
+                    border: `1px dashed ${colors.emptyStateBorder}`,
+                    backdropFilter: 'blur(10px)'
+                  }} 
+                  elevation={0}
+                >
+                  <Box 
+                    sx={{ 
+                      display: 'inline-flex', 
+                      p: 3, 
+                      background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(139,92,246,0.15) 100%)',
+                      borderRadius: '50%', 
+                      mb: 3,
+                      border: '1px solid rgba(59,130,246,0.2)'
+                    }}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  Ready to Analyze
-                </h2>
-                <p className="text-gray-600">
-                  Adjust the vehicle telemetry parameters on the left and click
-                  "Analyze Vehicle Health" to get AI-powered diagnostics and
-                  maintenance recommendations.
-                </p>
-              </div>
+                    <AnalyticsIcon sx={{ fontSize: 56, color: '#3b82f6' }} />
+                  </Box>
+                  <Typography variant="h5" fontWeight="700" color={colors.textPrimary} gutterBottom>
+                    Ready for Analysis
+                  </Typography>
+                  <Typography color={colors.textSecondary} maxWidth="400px" mx="auto" lineHeight={1.7}>
+                    Configure vehicle telemetry parameters in the left panel and click 
+                    <strong style={{ color: '#3b82f6' }}> Run Analysis </strong> 
+                    to receive AI-powered diagnostics and maintenance recommendations.
+                  </Typography>
+                </Paper>
+              </Fade>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+              <Fade in timeout={300}>
+                <Paper 
+                  sx={{ 
+                    p: 8, 
+                    textAlign: 'center', 
+                    borderRadius: 4,
+                    bgcolor: colors.cardBg,
+                    border: `1px solid ${colors.sidebarBorder}`
+                  }} 
+                  elevation={0}
+                >
+                  <CircularProgress size={60} sx={{ color: '#3b82f6', mb: 3 }} />
+                  <Typography variant="h6" fontWeight="600" color={colors.textPrimary} gutterBottom>
+                    Analyzing Vehicle Health...
+                  </Typography>
+                  <Typography color={colors.textSecondary}>
+                    Running LSTM predictions and anomaly detection
+                  </Typography>
+                </Paper>
+              </Fade>
             )}
 
             {/* Results */}
-            {prediction && (
-              <>
-                {/* Maintenance Recommendation */}
-                <MaintenanceRecommendation
-                  decision={prediction.maintenance_decision}
-                />
+            {prediction && !loading && (
+              <Fade in timeout={500}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {/* Section Header */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="h5" fontWeight="700" color={colors.textPrimary}>
+                      Analysis Results
+                    </Typography>
+                    <Chip 
+                      label="Complete" 
+                      size="small"
+                      sx={{ 
+                        bgcolor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
+                        color: isDark ? '#4ade80' : '#16a34a',
+                        fontWeight: 600 
+                      }}
+                    />
+                  </Box>
 
-                {/* KPI Cards */}
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                    📊 Key Performance Indicators
-                  </h2>
-                  <KPICards kpis={prediction.kpis} />
-                </div>
+                  {/* Maintenance Recommendation - Hero Card */}
+                  <MaintenanceRecommendation
+                    decision={prediction.maintenance_decision}
+                  />
 
-                {/* Component Health */}
-                <ComponentHealth componentHealth={prediction.component_health} />
+                  {/* KPI Section */}
+                  <Box>
+                    <Typography 
+                      variant="overline" 
+                      sx={{ 
+                        color: colors.textSecondary, 
+                        letterSpacing: 2, 
+                        fontWeight: 700,
+                        display: 'block',
+                        mb: 2
+                      }}
+                    >
+                      Key Performance Indicators
+                    </Typography>
+                    <KPICards kpis={prediction.kpis} />
+                  </Box>
 
-                {/* Degradation Contributors */}
-                <DegradationContributors
-                  contributors={prediction.degradation_contributors}
-                />
-              </>
+                  {/* Two Column Layout for Health & Contributors */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
+                    <ComponentHealth componentHealth={prediction.component_health} />
+                    <DegradationContributors contributors={prediction.degradation_contributors} />
+                  </Box>
+                </Box>
+              </Fade>
             )}
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-800 text-gray-300 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-sm">
-            BMW Vehicle Health Monitoring System | Powered by AI & Machine Learning
-          </p>
-        </div>
-      </footer>
-    </div>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

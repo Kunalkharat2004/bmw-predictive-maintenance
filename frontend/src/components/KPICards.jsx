@@ -1,23 +1,63 @@
 /**
  * KPI Cards Component
- * Displays key performance indicators in a grid layout
+ * Displays key performance indicators in a professional grid layout
  */
 import React from 'react';
-import { Activity, Clock, AlertTriangle, Heart } from 'lucide-react';
-import { formatPercentage } from '../utils/helpers';
+import { 
+  Grid, 
+  Box, 
+  Typography, 
+  Skeleton
+} from '@mui/material';
+import { 
+  Warning as WarningIcon,
+  AccessTime as ClockIcon,
+  Timeline as ActivityIcon,
+  Favorite as HeartIcon
+} from '@mui/icons-material';
+import { useThemeMode } from '../context/ThemeContext';
 
 const KPICards = ({ kpis }) => {
+  const { isDark } = useThemeMode();
+
   if (!kpis) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Grid container spacing={2}>
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="bg-gray-100 rounded-xl p-6 animate-pulse">
-            <div className="h-20"></div>
-          </div>
+          <Grid item xs={6} md={3} key={i}>
+            <Skeleton 
+              variant="rectangular" 
+              height={120} 
+              sx={{ borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} 
+            />
+          </Grid>
         ))}
-      </div>
+      </Grid>
     );
   }
+
+  const getKPIConfig = (id, value) => {
+    switch(id) {
+      case 'failure':
+        if (value >= 70) return { color: '#ef4444', bg: `rgba(239, 68, 68, ${isDark ? 0.1 : 0.08})`, border: `rgba(239, 68, 68, ${isDark ? 0.3 : 0.2})` };
+        if (value >= 40) return { color: '#f97316', bg: `rgba(249, 115, 22, ${isDark ? 0.1 : 0.08})`, border: `rgba(249, 115, 22, ${isDark ? 0.3 : 0.2})` };
+        return { color: '#22c55e', bg: `rgba(34, 197, 94, ${isDark ? 0.1 : 0.08})`, border: `rgba(34, 197, 94, ${isDark ? 0.3 : 0.2})` };
+      case 'rul':
+        if (value <= 30) return { color: '#ef4444', bg: `rgba(239, 68, 68, ${isDark ? 0.1 : 0.08})`, border: `rgba(239, 68, 68, ${isDark ? 0.3 : 0.2})` };
+        if (value <= 60) return { color: '#f97316', bg: `rgba(249, 115, 22, ${isDark ? 0.1 : 0.08})`, border: `rgba(249, 115, 22, ${isDark ? 0.3 : 0.2})` };
+        return { color: '#3b82f6', bg: `rgba(59, 130, 246, ${isDark ? 0.1 : 0.08})`, border: `rgba(59, 130, 246, ${isDark ? 0.3 : 0.2})` };
+      case 'anomaly':
+        if (value >= 0.5) return { color: '#ef4444', bg: `rgba(239, 68, 68, ${isDark ? 0.1 : 0.08})`, border: `rgba(239, 68, 68, ${isDark ? 0.3 : 0.2})` };
+        if (value >= 0.1) return { color: '#f97316', bg: `rgba(249, 115, 22, ${isDark ? 0.1 : 0.08})`, border: `rgba(249, 115, 22, ${isDark ? 0.3 : 0.2})` };
+        return { color: '#8b5cf6', bg: `rgba(139, 92, 246, ${isDark ? 0.1 : 0.08})`, border: `rgba(139, 92, 246, ${isDark ? 0.3 : 0.2})` };
+      case 'health':
+        if (value >= 80) return { color: '#22c55e', bg: `rgba(34, 197, 94, ${isDark ? 0.1 : 0.08})`, border: `rgba(34, 197, 94, ${isDark ? 0.3 : 0.2})` };
+        if (value >= 50) return { color: '#f97316', bg: `rgba(249, 115, 22, ${isDark ? 0.1 : 0.08})`, border: `rgba(249, 115, 22, ${isDark ? 0.3 : 0.2})` };
+        return { color: '#ef4444', bg: `rgba(239, 68, 68, ${isDark ? 0.1 : 0.08})`, border: `rgba(239, 68, 68, ${isDark ? 0.3 : 0.2})` };
+      default:
+        return { color: '#3b82f6', bg: `rgba(59, 130, 246, ${isDark ? 0.1 : 0.08})`, border: `rgba(59, 130, 246, ${isDark ? 0.3 : 0.2})` };
+    }
+  };
 
   const cards = [
     {
@@ -25,78 +65,108 @@ const KPICards = ({ kpis }) => {
       title: 'Failure Risk',
       value: kpis.failure_probability,
       unit: '%',
-      icon: AlertTriangle,
-      getColor: (val) => {
-        if (val >= 70) return { bg: 'bg-red-100', text: 'text-red-600', icon: 'text-red-500' };
-        if (val >= 40) return { bg: 'bg-yellow-100', text: 'text-yellow-600', icon: 'text-yellow-500' };
-        return { bg: 'bg-green-100', text: 'text-green-600', icon: 'text-green-500' };
-      }
+      icon: WarningIcon,
+      displayValue: (v) => Math.round(v)
     },
     {
       id: 'rul',
-      title: 'Remaining Useful Life',
+      title: 'RUL',
+      subtitle: 'Remaining Life',
       value: kpis.remaining_useful_life,
-      unit: ' cycles',
-      icon: Clock,
-      getColor: (val) => {
-        if (val <= 30) return { bg: 'bg-red-100', text: 'text-red-600', icon: 'text-red-500' };
-        if (val <= 60) return { bg: 'bg-yellow-100', text: 'text-yellow-600', icon: 'text-yellow-500' };
-        return { bg: 'bg-blue-100', text: 'text-blue-600', icon: 'text-blue-500' };
-      }
+      unit: 'cycles',
+      icon: ClockIcon,
+      displayValue: (v) => Math.round(v)
     },
     {
       id: 'anomaly',
-      title: 'Anomaly Index',
+      title: 'Anomaly',
+      subtitle: 'Detection Score',
       value: kpis.anomaly_score,
       unit: '',
-      icon: Activity,
-      getColor: (val) => {
-        if (val >= 0.5) return { bg: 'bg-red-100', text: 'text-red-600', icon: 'text-red-500' };
-        if (val >= 0.1) return { bg: 'bg-yellow-100', text: 'text-yellow-600', icon: 'text-yellow-500' };
-        return { bg: 'bg-purple-100', text: 'text-purple-600', icon: 'text-purple-500' };
-      }
+      icon: ActivityIcon,
+      displayValue: (v) => v.toFixed(4)
     },
     {
       id: 'health',
-      title: 'Overall Health',
+      title: 'Health Score',
       value: kpis.overall_health,
       unit: '%',
-      icon: Heart,
-      getColor: (val) => {
-        if (val >= 80) return { bg: 'bg-green-100', text: 'text-green-600', icon: 'text-green-500' };
-        if (val >= 50) return { bg: 'bg-yellow-100', text: 'text-yellow-600', icon: 'text-yellow-500' };
-        return { bg: 'bg-red-100', text: 'text-red-600', icon: 'text-red-500' };
-      }
+      icon: HeartIcon,
+      displayValue: (v) => Math.round(v)
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <Grid container spacing={2}>
       {cards.map((card) => {
-        const colors = card.getColor(card.value);
+        const config = getKPIConfig(card.id, card.value);
         const Icon = card.icon;
 
         return (
-          <div
-            key={card.id}
-            className={`${colors.bg} rounded-xl p-6 border-2 border-gray-200 shadow-sm hover:shadow-md transition-all duration-300`}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-sm font-medium text-gray-600">{card.title}</p>
-              <Icon className={`h-5 w-5 ${colors.icon}`} />
-            </div>
-            <div className="flex items-baseline gap-1">
-              <p className={`text-3xl font-bold ${colors.text}`}>
-                {card.id === 'anomaly' ? card.value.toFixed(4) : Math.round(card.value)}
-              </p>
-              <span className={`text-lg font-medium ${colors.text}`}>
-                {card.unit}
-              </span>
-            </div>
-          </div>
+          <Grid item xs={6} md={3} key={card.id}>
+            <Box 
+              sx={{ 
+                p: 2.5,
+                borderRadius: 3,
+                bgcolor: config.bg,
+                border: `1px solid ${config.border}`,
+                height: '100%',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 25px ${config.border}`
+                }
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b', 
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    fontSize: '0.65rem'
+                  }}
+                >
+                  {card.title}
+                </Typography>
+                <Box 
+                  sx={{ 
+                    p: 0.75, 
+                    borderRadius: 1.5, 
+                    bgcolor: `${config.color}20`,
+                    display: 'flex'
+                  }}
+                >
+                  <Icon sx={{ fontSize: 16, color: config.color }} />
+                </Box>
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontWeight: 800, 
+                    color: config.color,
+                    lineHeight: 1,
+                    letterSpacing: '-1px'
+                  }}
+                >
+                  {card.displayValue(card.value)}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8', fontWeight: 500 }}
+                >
+                  {card.unit}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
         );
       })}
-    </div>
+    </Grid>
   );
 };
 

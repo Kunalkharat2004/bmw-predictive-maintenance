@@ -3,52 +3,147 @@
  * Shows the top factors contributing to vehicle degradation
  */
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { 
+  Box, 
+  Typography, 
+  Chip
+} from '@mui/material';
+import { 
+  TrendingDown, 
+  WarningAmber,
+  Lightbulb
+} from '@mui/icons-material';
+import { useThemeMode } from '../context/ThemeContext';
 
 const DegradationContributors = ({ contributors }) => {
+  const { isDark } = useThemeMode();
+
+  const colors = {
+    cardBg: isDark ? 'rgba(22, 27, 34, 0.6)' : 'rgba(255, 255, 255, 0.9)',
+    cardBorder: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    textPrimary: isDark ? 'rgba(255,255,255,0.9)' : '#0f172a',
+    textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#64748b',
+    textMuted: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8',
+    warningBg: isDark ? 'rgba(249, 115, 22, 0.08)' : 'rgba(249, 115, 22, 0.06)',
+    warningBorder: isDark ? 'rgba(249, 115, 22, 0.2)' : 'rgba(249, 115, 22, 0.15)',
+    infoBg: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.06)',
+    infoBorder: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
+  };
+
   if (!contributors || contributors.length === 0) {
     return null;
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 border-2 border-gray-200 shadow-sm">
-      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-        <span>📉</span>
-        Dominant Degradation Contributors
-      </h3>
+    <Box 
+      sx={{ 
+        p: 3, 
+        borderRadius: 3, 
+        bgcolor: colors.cardBg,
+        border: `1px solid ${colors.cardBorder}`,
+        boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
+      }}
+    >
+      <Typography 
+        variant="overline" 
+        sx={{ 
+          color: colors.textSecondary, 
+          letterSpacing: 2, 
+          fontWeight: 700,
+          display: 'block',
+          mb: 2.5
+        }}
+      >
+        Degradation Factors
+      </Typography>
 
-      <div className="space-y-3 mb-4">
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
         {contributors.map((contributor, index) => (
-          <div
+          <Box 
             key={index}
-            className="flex items-start gap-3 p-3 bg-amber-50 border-2 border-amber-200 rounded-lg"
+            sx={{ 
+              p: 2,
+              borderRadius: 2,
+              bgcolor: colors.warningBg,
+              border: `1px solid ${colors.warningBorder}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2
+            }}
           >
-            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold text-gray-800">
+            <Box 
+              sx={{ 
+                p: 1, 
+                borderRadius: 1.5, 
+                bgcolor: 'rgba(249, 115, 22, 0.15)',
+                display: 'flex'
+              }}
+            >
+              <WarningAmber sx={{ fontSize: 18, color: '#f97316' }} />
+            </Box>
+            
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ color: colors.textPrimary, fontWeight: 600, mb: 0.25 }}
+                noWrap
+              >
                 {contributor.feature}
-              </p>
-              <p className="text-sm text-gray-600">
-                Current value: <span className="font-medium">{contributor.value}</span>
-                {' • '}
-                Importance: <span className="font-medium">{contributor.importance.toFixed(3)}</span>
-              </p>
-            </div>
-            <div className="bg-amber-600 text-white rounded-full px-3 py-1 text-sm font-bold">
-              #{index + 1}
-            </div>
-          </div>
-        ))}
-      </div>
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ color: colors.textMuted }}
+              >
+                Value: <strong style={{ color: '#f97316' }}>{contributor.value}</strong> • 
+                Impact: <strong style={{ color: '#f97316' }}>{contributor.importance.toFixed(3)}</strong>
+              </Typography>
+            </Box>
 
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-gray-700 leading-relaxed">
-          <strong className="text-blue-900">💡 Engineering Insight:</strong><br />
-          The highlighted components show elevated stress levels and are most likely to
-          contribute to future degradation or unexpected breakdowns if left unaddressed.
-        </p>
-      </div>
-    </div>
+            <Chip 
+              label={`#${index + 1}`} 
+              size="small"
+              sx={{ 
+                bgcolor: 'rgba(249, 115, 22, 0.2)',
+                color: '#f97316',
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                height: 24
+              }}
+            />
+          </Box>
+        ))}
+      </Box>
+
+      {/* Insight Box */}
+      <Box 
+        sx={{ 
+          p: 2,
+          borderRadius: 2,
+          bgcolor: colors.infoBg,
+          border: `1px solid ${colors.infoBorder}`,
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 1.5
+        }}
+      >
+        <Lightbulb sx={{ fontSize: 18, color: '#3b82f6', mt: 0.25 }} />
+        <Box>
+          <Typography 
+            variant="caption" 
+            sx={{ color: '#3b82f6', fontWeight: 700, display: 'block', mb: 0.5 }}
+          >
+            Engineering Insight
+          </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ color: colors.textMuted, lineHeight: 1.5 }}
+          >
+            These components show elevated stress and may contribute to future 
+            degradation if left unaddressed.
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

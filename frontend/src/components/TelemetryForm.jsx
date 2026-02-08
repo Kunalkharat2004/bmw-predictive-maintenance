@@ -1,20 +1,43 @@
 /**
  * Telemetry Input Form Component
- * Allows users to adjust vehicle telemetry parameters using sliders
+ * Allows users to adjust vehicle telemetry parameters
  */
 import React from 'react';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Slider, 
+  Collapse,
+  IconButton,
+  useTheme
+} from '@mui/material';
+import { 
+  RestartAlt as ResetIcon,
+  BatteryChargingFull,
+  Thermostat,
+  SettingsSuggest,
+  Speed,
+  Timeline,
+  HealthAndSafety,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
+} from '@mui/icons-material';
+import { useThemeMode } from '../context/ThemeContext';
 import { FEATURE_DEFINITIONS } from '../utils/helpers';
 
 const TelemetryForm = ({ values, onChange }) => {
-  // Group features by category
-  const categories = {
-    battery: { name: 'Battery System', icon: '🔋', color: 'blue' },
-    thermal: { name: 'Thermal Management', icon: '🌡️', color: 'orange' },
-    motor: { name: 'Motor System', icon: '⚙️', color: 'purple' },
-    braking: { name: 'Braking System', icon: '🛑', color: 'red' },
-    usage: { name: 'Usage Metrics', icon: '📊', color: 'green' },
-    overall: { name: 'Overall Health', icon: '💚', color: 'teal' }
-  };
+  const theme = useTheme();
+  const { isDark } = useThemeMode();
+
+  const [expandedCategories, setExpandedCategories] = React.useState({
+    battery: true,
+    thermal: true,
+    motor: true,
+    braking: true,
+    usage: true,
+    overall: true
+  });
 
   const groupedFeatures = FEATURE_DEFINITIONS.reduce((acc, feature) => {
     if (!acc[feature.category]) {
@@ -24,81 +47,207 @@ const TelemetryForm = ({ values, onChange }) => {
     return acc;
   }, {});
 
+  const getCategoryIcon = (category) => {
+    const iconProps = { sx: { fontSize: 18 } };
+    switch(category) {
+      case 'battery': return <BatteryChargingFull {...iconProps} />;
+      case 'thermal': return <Thermostat {...iconProps} />;
+      case 'motor': return <SettingsSuggest {...iconProps} />;
+      case 'braking': return <Speed {...iconProps} />;
+      case 'usage': return <Timeline {...iconProps} />;
+      default: return <HealthAndSafety {...iconProps} />;
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch(category) {
+      case 'battery': return '#3b82f6';
+      case 'thermal': return '#f97316';
+      case 'motor': return '#8b5cf6';
+      case 'braking': return '#ef4444';
+      case 'usage': return '#22c55e';
+      default: return '#06b6d4';
+    }
+  };
+
+  const getCategoryLabel = (category) => {
+    const labels = {
+        battery: 'Battery',
+        thermal: 'Thermal',
+        motor: 'Motor',
+        braking: 'Braking',
+        usage: 'Usage',
+        overall: 'Overall'
+    };
+    return labels[category] || category;
+  };
+
+  const handleReset = () => {
+    const defaults = {};
+    FEATURE_DEFINITIONS.forEach(f => {
+      defaults[f.id] = f.default;
+    });
+    onChange(defaults);
+  };
+
+  const handleSliderChange = (id) => (event, newValue) => {
+    onChange({ ...values, [id]: newValue });
+  };
+
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  // Theme-aware colors
+  const colors = {
+    textPrimary: isDark ? 'rgba(255,255,255,0.9)' : '#0f172a',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#64748b',
+    textMuted: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8',
+    textVeryMuted: isDark ? 'rgba(255,255,255,0.3)' : '#cbd5e1',
+    cardBg: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+    cardBorder: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    hoverBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+    sliderRail: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">
-          🔧 Live Vehicle Telemetry
-        </h2>
-        <button
-          onClick={() => {
-            const defaults = {};
-            FEATURE_DEFINITIONS.forEach(f => {
-              defaults[f.id] = f.default;
-            });
-            onChange(defaults);
+    <Box>
+      {/* Reset Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button 
+          variant="text" 
+          size="small" 
+          startIcon={<ResetIcon sx={{ fontSize: 16 }} />} 
+          onClick={handleReset}
+          sx={{ 
+            color: colors.textMuted,
+            fontSize: '0.75rem',
+            '&:hover': { color: colors.textSecondary, bgcolor: colors.hoverBg }
           }}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
         >
-          Reset to Defaults
-        </button>
-      </div>
+          Reset All
+        </Button>
+      </Box>
 
-      {Object.entries(groupedFeatures).map(([category, features]) => {
-        const categoryInfo = categories[category];
-        const colorClasses = {
-          blue: 'border-blue-200 bg-blue-50',
-          orange: 'border-orange-200 bg-orange-50',
-          purple: 'border-purple-200 bg-purple-50',
-          red: 'border-red-200 bg-red-50',
-          green: 'border-green-200 bg-green-50',
-          teal: 'border-teal-200 bg-teal-50'
-        };
-
-        return (
-          <div
-            key={category}
-            className={`border-2 rounded-xl p-6 ${colorClasses[categoryInfo.color]}`}
-          >
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <span className="text-2xl">{categoryInfo.icon}</span>
-              {categoryInfo.name}
-            </h3>
-
-            <div className="space-y-4">
-              {features.map((feature) => (
-                <div key={feature.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">
-                      {feature.name}
-                    </label>
-                    <span className="text-sm font-bold text-gray-900 bg-white px-3 py-1 rounded-lg shadow-sm">
-                      {values[feature.id]} {feature.unit}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={feature.min}
-                    max={feature.max}
-                    step={feature.step || 1}
-                    value={values[feature.id]}
-                    onChange={(e) => onChange({
-                      ...values,
-                      [feature.id]: Number(e.target.value)
-                    })}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                  />
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{feature.min} {feature.unit}</span>
-                    <span>{feature.max} {feature.unit}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+      {/* Category Groups */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {Object.entries(groupedFeatures).map(([category, features]) => {
+          const color = getCategoryColor(category);
+          const isExpanded = expandedCategories[category];
+          
+          return (
+            <Box 
+              key={category}
+              sx={{ 
+                bgcolor: colors.cardBg,
+                borderRadius: 2,
+                border: `1px solid ${colors.cardBorder}`,
+                overflow: 'hidden'
+              }}
+            >
+              {/* Category Header */}
+              <Box 
+                onClick={() => toggleCategory(category)}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  px: 2,
+                  py: 1.5,
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: colors.hoverBg }
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box 
+                    sx={{ 
+                      p: 0.75, 
+                      borderRadius: 1.5, 
+                      bgcolor: `${color}20`,
+                      color: color,
+                      display: 'flex'
+                    }}
+                  >
+                    {getCategoryIcon(category)}
+                  </Box>
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ color: colors.textPrimary, fontWeight: 600 }}
+                  >
+                    {getCategoryLabel(category)}
+                  </Typography>
+                </Box>
+                <IconButton size="small" sx={{ color: colors.textVeryMuted }}>
+                  {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                </IconButton>
+              </Box>
+              
+              {/* Features */}
+              <Collapse in={isExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
+                  {features.map((feature) => (
+                    <Box key={feature.id} sx={{ mb: 2.5, '&:last-child': { mb: 0 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ color: colors.textSecondary, fontWeight: 500 }}
+                        >
+                          {feature.name}
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ color: color, fontWeight: 700 }}
+                        >
+                          {values[feature.id]} {feature.unit}
+                        </Typography>
+                      </Box>
+                      <Slider
+                        value={typeof values[feature.id] === 'number' ? values[feature.id] : 0}
+                        onChange={handleSliderChange(feature.id)}
+                        min={feature.min}
+                        max={feature.max}
+                        step={feature.step || 1}
+                        size="small"
+                        sx={{
+                          color: color,
+                          height: 4,
+                          '& .MuiSlider-thumb': {
+                            width: 14,
+                            height: 14,
+                            bgcolor: isDark ? 'white' : color,
+                            border: `2px solid ${color}`,
+                            '&:hover, &.Mui-focusVisible': {
+                              boxShadow: `0 0 0 6px ${color}30`
+                            }
+                          },
+                          '& .MuiSlider-track': {
+                            bgcolor: color
+                          },
+                          '& .MuiSlider-rail': {
+                            bgcolor: colors.sliderRail
+                          }
+                        }}
+                      />
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ color: colors.textVeryMuted, fontSize: '0.65rem' }}>
+                          {feature.min}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: colors.textVeryMuted, fontSize: '0.65rem' }}>
+                          {feature.max}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Collapse>
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
   );
 };
 
