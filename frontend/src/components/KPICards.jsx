@@ -106,19 +106,19 @@ const KPICards = ({ kpis }) => {
           <Grid item xs={6} md={3} key={card.id}>
             <Box 
               sx={{ 
-                p: 2.5,
-                borderRadius: 3,
+                p: { xs: 2, sm: 2.5 },
+                borderRadius: { xs: 2, sm: 3 },
                 bgcolor: config.bg,
                 border: `1px solid ${config.border}`,
                 height: '100%',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 8px 25px ${config.border}`
+                  transform: { xs: 'none', sm: 'translateY(-2px)' },
+                  boxShadow: { xs: 'none', sm: `0 8px 25px ${config.border}` }
                 }
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: { xs: 1, sm: 2 } }}>
                 <Typography 
                   variant="caption" 
                   sx={{ 
@@ -126,38 +126,42 @@ const KPICards = ({ kpis }) => {
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
-                    fontSize: '0.65rem'
+                    fontSize: { xs: '0.6rem', sm: '0.65rem' }
                   }}
                 >
                   {card.title}
                 </Typography>
                 <Box 
                   sx={{ 
-                    p: 0.75, 
+                    p: { xs: 0.5, sm: 0.75 }, 
                     borderRadius: 1.5, 
                     bgcolor: `${config.color}20`,
                     display: 'flex'
                   }}
                 >
-                  <Icon sx={{ fontSize: 16, color: config.color }} />
+                  <Icon sx={{ fontSize: { xs: 14, sm: 16 }, color: config.color }} />
                 </Box>
               </Box>
               
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                 <Typography 
-                  variant="h4" 
                   sx={{ 
                     fontWeight: 800, 
                     color: config.color,
                     lineHeight: 1,
-                    letterSpacing: '-1px'
+                    letterSpacing: '-1px',
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
                   }}
                 >
                   {card.displayValue(card.value)}
                 </Typography>
                 <Typography 
                   variant="body2" 
-                  sx={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8', fontWeight: 500 }}
+                  sx={{ 
+                    color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8', 
+                    fontWeight: 500,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  }}
                 >
                   {card.unit}
                 </Typography>

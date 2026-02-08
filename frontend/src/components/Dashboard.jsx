@@ -1,6 +1,7 @@
 /**
  * Main Dashboard Component
  * Orchestrates the vehicle health monitoring interface
+ * Fully responsive across all devices
  */
 import React, { useState } from 'react';
 import { 
@@ -16,7 +17,10 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  useTheme
+  useTheme,
+  useMediaQuery,
+  Drawer,
+  SwipeableDrawer
 } from '@mui/material';
 import { 
   DirectionsCar as CarIcon, 
@@ -25,7 +29,9 @@ import {
   Speed as SpeedIcon,
   Memory as MemoryIcon,
   LightMode as LightModeIcon,
-  DarkMode as DarkModeIcon
+  DarkMode as DarkModeIcon,
+  Tune as TuneIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 
 import { useThemeMode } from '../context/ThemeContext';
@@ -37,11 +43,18 @@ import MaintenanceRecommendation from './MaintenanceRecommendation';
 import { predictVehicleHealth } from '../services/api';
 import { FEATURE_DEFINITIONS, convertToFeatures } from '../utils/helpers';
 
-const SIDEBAR_WIDTH = 380;
+const SIDEBAR_WIDTH = 440;
 
 const Dashboard = () => {
   const theme = useTheme();
   const { mode, toggleTheme, isDark } = useThemeMode();
+  
+  // Responsive breakpoints
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  
+  // Mobile drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [telemetryValues, setTelemetryValues] = useState(() => {
     const defaults = {};
@@ -58,6 +71,11 @@ const Dashboard = () => {
   const handleAnalyze = async () => {
     setLoading(true);
     setError(null);
+    
+    // Close drawer on mobile after clicking analyze
+    if (isMobile) {
+      setDrawerOpen(false);
+    }
 
     try {
       const features = convertToFeatures(telemetryValues);
@@ -91,6 +109,98 @@ const Dashboard = () => {
     emptyStateBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
   };
 
+  // Sidebar width based on screen size
+  const getSidebarWidth = () => {
+    if (isMobile) return '100%';
+    if (isTablet) return 380;
+    return SIDEBAR_WIDTH;
+  };
+
+  // Telemetry Form Sidebar Content
+  const SidebarContent = () => (
+    <Box 
+      sx={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        height: isMobile ? '100%' : 'calc(100vh - 72px)',
+        bgcolor: colors.sidebarBg,
+      }}
+    >
+      {/* Sidebar Header */}
+      <Box sx={{ 
+        p: 2.5, 
+        borderBottom: `1px solid ${colors.sidebarBorder}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <Box>
+          <Typography variant="subtitle1" fontWeight="700" color={colors.textPrimary} sx={{ mb: 0.5 }}>
+            Telemetry Configuration
+          </Typography>
+          <Typography variant="caption" color={colors.textSecondary}>
+            Adjust vehicle parameters for analysis
+          </Typography>
+        </Box>
+        {isMobile && (
+          <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: colors.textSecondary }}>
+            <CloseIcon />
+          </IconButton>
+        )}
+      </Box>
+      
+      {/* Scrollable Form Area */}
+      <Box 
+        sx={{ 
+          flexGrow: 1, 
+          overflowY: 'auto', 
+          p: 2,
+          '&::-webkit-scrollbar': { width: 6 },
+          '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+          '&::-webkit-scrollbar-thumb': { 
+            bgcolor: colors.scrollThumb, 
+            borderRadius: 3,
+            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }
+          }
+        }}
+      >
+        <TelemetryForm
+          values={telemetryValues}
+          onChange={setTelemetryValues}
+        />
+      </Box>
+
+      {/* Analyze Button */}
+      <Box sx={{ p: 2, borderTop: `1px solid ${colors.sidebarBorder}` }}>
+        <Button
+          variant="contained"
+          fullWidth
+          size="large"
+          onClick={handleAnalyze}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
+          sx={{ 
+            py: 1.5,
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+              boxShadow: '0 6px 20px rgba(59, 130, 246, 0.5)',
+            },
+            '&:disabled': {
+              background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+              color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+            }
+          }}
+        >
+          {loading ? 'Analyzing...' : 'Run Analysis'}
+        </Button>
+      </Box>
+    </Box>
+  );
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: colors.contentBg }}>
       {/* Header */}
@@ -103,7 +213,22 @@ const Dashboard = () => {
           backdropFilter: 'blur(10px)'
         }}
       >
-        <Toolbar sx={{ py: 1.5 }}>
+        <Toolbar sx={{ py: 1.5, px: { xs: 2, sm: 3 } }}>
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <IconButton 
+              onClick={() => setDrawerOpen(true)}
+              sx={{ 
+                mr: 1.5,
+                bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                color: colors.textPrimary
+              }}
+            >
+              <TuneIcon />
+            </IconButton>
+          )}
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box 
               sx={{ 
@@ -113,9 +238,9 @@ const Dashboard = () => {
                 display: 'flex'
               }}
             >
-              <CarIcon sx={{ fontSize: 24, color: 'white' }} />
+              <CarIcon sx={{ fontSize: { xs: 20, sm: 24 }, color: 'white' }} />
             </Box>
-            <Box>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Typography variant="h6" fontWeight="700" color={colors.textPrimary} letterSpacing="-0.5px">
                 Vehicle Health Monitor
               </Typography>
@@ -123,42 +248,50 @@ const Dashboard = () => {
                 Predictive Maintenance System
               </Typography>
             </Box>
+            {/* Mobile: Short title */}
+            <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+              <Typography variant="subtitle1" fontWeight="700" color={colors.textPrimary}>
+                Vehicle Health
+              </Typography>
+            </Box>
           </Box>
           
           <Box sx={{ flexGrow: 1 }} />
           
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Chip 
-              icon={<MemoryIcon sx={{ fontSize: 16 }} />}
-              label="LSTM + Autoencoder"
-              size="small"
-              sx={{ 
-                bgcolor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                color: '#3b82f6',
-                border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
-                fontWeight: 600,
-                fontSize: '0.7rem'
-              }}
-            />
-            <Chip 
-              icon={<SpeedIcon sx={{ fontSize: 16 }} />}
-              label="Real-time"
-              size="small"
-              sx={{ 
-                bgcolor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
-                color: isDark ? '#4ade80' : '#16a34a',
-                border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)'}`,
-                fontWeight: 600,
-                fontSize: '0.7rem'
-              }}
-            />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+            {/* Hide chips on mobile */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2 }}>
+              <Chip 
+                icon={<MemoryIcon sx={{ fontSize: 16 }} />}
+                label="LSTM + Autoencoder"
+                size="small"
+                sx={{ 
+                  bgcolor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                  color: '#3b82f6',
+                  border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
+                  fontWeight: 600,
+                  fontSize: '0.7rem'
+                }}
+              />
+              <Chip 
+                icon={<SpeedIcon sx={{ fontSize: 16 }} />}
+                label="Real-time"
+                size="small"
+                sx={{ 
+                  bgcolor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
+                  color: isDark ? '#4ade80' : '#16a34a',
+                  border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)'}`,
+                  fontWeight: 600,
+                  fontSize: '0.7rem'
+                }}
+              />
+            </Box>
 
             {/* Theme Toggle Button */}
             <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
               <IconButton 
                 onClick={toggleTheme}
                 sx={{ 
-                  ml: 1,
                   bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
                   color: isDark ? '#f59e0b' : '#6366f1',
@@ -176,87 +309,45 @@ const Dashboard = () => {
         </Toolbar>
       </AppBar>
 
+      {/* Mobile Drawer */}
+      <SwipeableDrawer
+        anchor="left"
+        open={drawerOpen && isMobile}
+        onClose={() => setDrawerOpen(false)}
+        onOpen={() => setDrawerOpen(true)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: '100%',
+            maxWidth: 400,
+            bgcolor: colors.sidebarBg,
+          }
+        }}
+      >
+        <SidebarContent />
+      </SwipeableDrawer>
+
       {/* Main Content Area */}
       <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
-        {/* Left Sidebar - Telemetry Config */}
-        <Box 
-          sx={{ 
-            width: SIDEBAR_WIDTH, 
-            flexShrink: 0,
-            bgcolor: colors.sidebarBg,
-            borderRight: `1px solid ${colors.sidebarBorder}`,
-            display: 'flex',
-            flexDirection: 'column',
-            height: 'calc(100vh - 72px)'
-          }}
-        >
-          {/* Sidebar Header */}
-          <Box sx={{ p: 2.5, borderBottom: `1px solid ${colors.sidebarBorder}` }}>
-            <Typography variant="subtitle1" fontWeight="700" color={colors.textPrimary} sx={{ mb: 0.5 }}>
-              Telemetry Configuration
-            </Typography>
-            <Typography variant="caption" color={colors.textSecondary}>
-              Adjust vehicle parameters for analysis
-            </Typography>
-          </Box>
-          
-          {/* Scrollable Form Area */}
+        {/* Desktop Sidebar */}
+        {!isMobile && (
           <Box 
             sx={{ 
-              flexGrow: 1, 
-              overflowY: 'auto', 
-              p: 2,
-              '&::-webkit-scrollbar': { width: 6 },
-              '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-              '&::-webkit-scrollbar-thumb': { 
-                bgcolor: colors.scrollThumb, 
-                borderRadius: 3,
-                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }
-              }
+              width: getSidebarWidth(), 
+              flexShrink: 0,
+              borderRight: `1px solid ${colors.sidebarBorder}`,
             }}
           >
-            <TelemetryForm
-              values={telemetryValues}
-              onChange={setTelemetryValues}
-            />
+            <SidebarContent />
           </Box>
-
-          {/* Analyze Button */}
-          <Box sx={{ p: 2, borderTop: `1px solid ${colors.sidebarBorder}` }}>
-            <Button
-              variant="contained"
-              fullWidth
-              size="large"
-              onClick={handleAnalyze}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
-              sx={{ 
-                py: 1.5,
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                  boxShadow: '0 6px 20px rgba(59, 130, 246, 0.5)',
-                },
-                '&:disabled': {
-                  background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                  color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
-                }
-              }}
-            >
-              {loading ? 'Analyzing...' : 'Run Analysis'}
-            </Button>
-          </Box>
-        </Box>
+        )}
 
         {/* Right Content - Results */}
         <Box 
           sx={{ 
             flexGrow: 1, 
             overflowY: 'auto',
-            height: 'calc(100vh - 72px)',
+            height: { xs: 'auto', md: 'calc(100vh - 72px)' },
+            minHeight: { xs: 'calc(100vh - 72px)', md: 'auto' },
             bgcolor: colors.contentBg,
             '&::-webkit-scrollbar': { width: 8 },
             '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
@@ -267,7 +358,33 @@ const Dashboard = () => {
             }
           }}
         >
-          <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
+          <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 1200, mx: 'auto' }}>
+            {/* Mobile: Floating Action Button hint */}
+            {isMobile && !prediction && !loading && (
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  mb: 3, 
+                  borderRadius: 2,
+                  bgcolor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+                  border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
+                  '& .MuiAlert-icon': { color: '#3b82f6' }
+                }}
+                action={
+                  <Button 
+                    color="inherit" 
+                    size="small" 
+                    onClick={() => setDrawerOpen(true)}
+                    sx={{ fontWeight: 600 }}
+                  >
+                    Open
+                  </Button>
+                }
+              >
+                Tap the <TuneIcon sx={{ fontSize: 16, mx: 0.5, verticalAlign: 'middle' }} /> button to configure telemetry parameters
+              </Alert>
+            )}
+
             {/* Error Message */}
             {error && (
               <Alert 
@@ -284,9 +401,9 @@ const Dashboard = () => {
               <Fade in timeout={500}>
                 <Paper 
                   sx={{ 
-                    p: 8, 
+                    p: { xs: 4, sm: 6, md: 8 }, 
                     textAlign: 'center', 
-                    borderRadius: 4,
+                    borderRadius: { xs: 3, md: 4 },
                     bgcolor: colors.emptyStateBg,
                     border: `1px dashed ${colors.emptyStateBorder}`,
                     backdropFilter: 'blur(10px)'
@@ -296,23 +413,40 @@ const Dashboard = () => {
                   <Box 
                     sx={{ 
                       display: 'inline-flex', 
-                      p: 3, 
+                      p: { xs: 2, md: 3 }, 
                       background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(139,92,246,0.15) 100%)',
                       borderRadius: '50%', 
                       mb: 3,
                       border: '1px solid rgba(59,130,246,0.2)'
                     }}
                   >
-                    <AnalyticsIcon sx={{ fontSize: 56, color: '#3b82f6' }} />
+                    <AnalyticsIcon sx={{ fontSize: { xs: 40, md: 56 }, color: '#3b82f6' }} />
                   </Box>
                   <Typography variant="h5" fontWeight="700" color={colors.textPrimary} gutterBottom>
                     Ready for Analysis
                   </Typography>
                   <Typography color={colors.textSecondary} maxWidth="400px" mx="auto" lineHeight={1.7}>
-                    Configure vehicle telemetry parameters in the left panel and click 
-                    <strong style={{ color: '#3b82f6' }}> Run Analysis </strong> 
-                    to receive AI-powered diagnostics and maintenance recommendations.
+                    {isMobile 
+                      ? 'Open the telemetry panel to configure parameters and run AI-powered diagnostics.'
+                      : 'Configure vehicle telemetry parameters in the left panel and click Run Analysis to receive AI-powered diagnostics.'
+                    }
                   </Typography>
+                  
+                  {/* Mobile: Quick action button */}
+                  {isMobile && (
+                    <Button
+                      variant="contained"
+                      startIcon={<TuneIcon />}
+                      onClick={() => setDrawerOpen(true)}
+                      sx={{ 
+                        mt: 3,
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                        fontWeight: 600
+                      }}
+                    >
+                      Configure Telemetry
+                    </Button>
+                  )}
                 </Paper>
               </Fade>
             )}
@@ -322,9 +456,9 @@ const Dashboard = () => {
               <Fade in timeout={300}>
                 <Paper 
                   sx={{ 
-                    p: 8, 
+                    p: { xs: 4, sm: 6, md: 8 }, 
                     textAlign: 'center', 
-                    borderRadius: 4,
+                    borderRadius: { xs: 3, md: 4 },
                     bgcolor: colors.cardBg,
                     border: `1px solid ${colors.sidebarBorder}`
                   }} 
@@ -344,21 +478,40 @@ const Dashboard = () => {
             {/* Results */}
             {prediction && !loading && (
               <Fade in timeout={500}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, md: 4 } }}>
                   {/* Section Header */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Typography variant="h5" fontWeight="700" color={colors.textPrimary}>
-                      Analysis Results
-                    </Typography>
-                    <Chip 
-                      label="Complete" 
-                      size="small"
-                      sx={{ 
-                        bgcolor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
-                        color: isDark ? '#4ade80' : '#16a34a',
-                        fontWeight: 600 
-                      }}
-                    />
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Typography variant="h5" fontWeight="700" color={colors.textPrimary}>
+                        Analysis Results
+                      </Typography>
+                      <Chip 
+                        label="Complete" 
+                        size="small"
+                        sx={{ 
+                          bgcolor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)',
+                          color: isDark ? '#4ade80' : '#16a34a',
+                          fontWeight: 600 
+                        }}
+                      />
+                    </Box>
+                    
+                    {/* Mobile: Re-configure button */}
+                    {isMobile && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<TuneIcon />}
+                        onClick={() => setDrawerOpen(true)}
+                        sx={{ 
+                          borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                          color: colors.textPrimary,
+                          fontWeight: 600
+                        }}
+                      >
+                        Reconfigure
+                      </Button>
+                    )}
                   </Box>
 
                   {/* Maintenance Recommendation - Hero Card */}
