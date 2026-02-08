@@ -3,7 +3,7 @@
  * Orchestrates the vehicle health monitoring interface
  * Fully responsive across all devices
  */
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { 
   Box, 
   AppBar, 
@@ -19,7 +19,6 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
-  Drawer,
   SwipeableDrawer
 } from '@mui/material';
 import { 
@@ -45,9 +44,105 @@ import { FEATURE_DEFINITIONS, convertToFeatures } from '../utils/helpers';
 
 const SIDEBAR_WIDTH = 440;
 
+// Memoized Sidebar Content component
+const SidebarContent = memo(({ 
+  telemetryValues, 
+  onTelemetryChange, 
+  onAnalyze, 
+  loading, 
+  isMobile, 
+  onClose,
+  colors,
+  isDark
+}) => (
+  <Box 
+    sx={{ 
+      display: 'flex',
+      flexDirection: 'column',
+      height: isMobile ? '100%' : 'calc(100vh - 72px)',
+      bgcolor: colors.sidebarBg,
+    }}
+  >
+    {/* Sidebar Header */}
+    <Box sx={{ 
+      p: 2.5, 
+      borderBottom: `1px solid ${colors.sidebarBorder}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }}>
+      <Box>
+        <Typography variant="subtitle1" fontWeight="700" color={colors.textPrimary} sx={{ mb: 0.5 }}>
+          Telemetry Configuration
+        </Typography>
+        <Typography variant="caption" color={colors.textSecondary}>
+          Adjust vehicle parameters for analysis
+        </Typography>
+      </Box>
+      {isMobile && (
+        <IconButton onClick={onClose} sx={{ color: colors.textSecondary }}>
+          <CloseIcon />
+        </IconButton>
+      )}
+    </Box>
+    
+    {/* Scrollable Form Area */}
+    <Box 
+      sx={{ 
+        flexGrow: 1, 
+        overflowY: 'auto', 
+        p: 2,
+        '&::-webkit-scrollbar': { width: 6 },
+        '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+        '&::-webkit-scrollbar-thumb': { 
+          bgcolor: colors.scrollThumb, 
+          borderRadius: 3,
+          '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }
+        }
+      }}
+    >
+      <TelemetryForm
+        values={telemetryValues}
+        onChange={onTelemetryChange}
+      />
+    </Box>
+
+    {/* Analyze Button */}
+    <Box sx={{ p: 2, borderTop: `1px solid ${colors.sidebarBorder}` }}>
+      <Button
+        variant="contained"
+        fullWidth
+        size="large"
+        onClick={onAnalyze}
+        disabled={loading}
+        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
+        sx={{ 
+          py: 1.5,
+          fontWeight: 700,
+          fontSize: '0.95rem',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+          boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+            boxShadow: '0 6px 20px rgba(59, 130, 246, 0.5)',
+          },
+          '&:disabled': {
+            background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+          }
+        }}
+      >
+        {loading ? 'Analyzing...' : 'Run Analysis'}
+      </Button>
+    </Box>
+  </Box>
+));
+
+SidebarContent.displayName = 'SidebarContent';
+
 const Dashboard = () => {
   const theme = useTheme();
-  const { mode, toggleTheme, isDark } = useThemeMode();
+  const { toggleTheme, isDark } = useThemeMode();
   
   // Responsive breakpoints
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -68,7 +163,24 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleAnalyze = async () => {
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleTelemetryChange = useCallback((updater) => {
+    if (typeof updater === 'function') {
+      setTelemetryValues(updater);
+    } else {
+      setTelemetryValues(updater);
+    }
+  }, []);
+
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
+
+  const handleOpenDrawer = useCallback(() => {
+    setDrawerOpen(true);
+  }, []);
+
+  const handleAnalyze = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -92,10 +204,10 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [telemetryValues, isMobile]);
 
-  // Dynamic colors based on theme
-  const colors = {
+  // Memoized dynamic colors based on theme
+  const colors = useMemo(() => ({
     headerBg: isDark ? 'rgba(13, 17, 23, 0.95)' : 'rgba(255, 255, 255, 0.95)',
     headerBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     sidebarBg: isDark ? 'rgba(22, 27, 34, 0.98)' : '#ffffff',
@@ -107,99 +219,14 @@ const Dashboard = () => {
     scrollThumb: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
     emptyStateBg: isDark ? 'rgba(22, 27, 34, 0.6)' : 'rgba(255, 255, 255, 0.9)',
     emptyStateBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-  };
+  }), [isDark]);
 
   // Sidebar width based on screen size
-  const getSidebarWidth = () => {
+  const sidebarWidth = useMemo(() => {
     if (isMobile) return '100%';
     if (isTablet) return 380;
     return SIDEBAR_WIDTH;
-  };
-
-  // Telemetry Form Sidebar Content
-  const SidebarContent = () => (
-    <Box 
-      sx={{ 
-        display: 'flex',
-        flexDirection: 'column',
-        height: isMobile ? '100%' : 'calc(100vh - 72px)',
-        bgcolor: colors.sidebarBg,
-      }}
-    >
-      {/* Sidebar Header */}
-      <Box sx={{ 
-        p: 2.5, 
-        borderBottom: `1px solid ${colors.sidebarBorder}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <Box>
-          <Typography variant="subtitle1" fontWeight="700" color={colors.textPrimary} sx={{ mb: 0.5 }}>
-            Telemetry Configuration
-          </Typography>
-          <Typography variant="caption" color={colors.textSecondary}>
-            Adjust vehicle parameters for analysis
-          </Typography>
-        </Box>
-        {isMobile && (
-          <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: colors.textSecondary }}>
-            <CloseIcon />
-          </IconButton>
-        )}
-      </Box>
-      
-      {/* Scrollable Form Area */}
-      <Box 
-        sx={{ 
-          flexGrow: 1, 
-          overflowY: 'auto', 
-          p: 2,
-          '&::-webkit-scrollbar': { width: 6 },
-          '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-          '&::-webkit-scrollbar-thumb': { 
-            bgcolor: colors.scrollThumb, 
-            borderRadius: 3,
-            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }
-          }
-        }}
-      >
-        <TelemetryForm
-          values={telemetryValues}
-          onChange={setTelemetryValues}
-        />
-      </Box>
-
-      {/* Analyze Button */}
-      <Box sx={{ p: 2, borderTop: `1px solid ${colors.sidebarBorder}` }}>
-        <Button
-          variant="contained"
-          fullWidth
-          size="large"
-          onClick={handleAnalyze}
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
-          sx={{ 
-            py: 1.5,
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-              boxShadow: '0 6px 20px rgba(59, 130, 246, 0.5)',
-            },
-            '&:disabled': {
-              background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-              color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
-            }
-          }}
-        >
-          {loading ? 'Analyzing...' : 'Run Analysis'}
-        </Button>
-      </Box>
-    </Box>
-  );
+  }, [isMobile, isTablet]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: colors.contentBg }}>
@@ -217,7 +244,7 @@ const Dashboard = () => {
           {/* Mobile Menu Button */}
           {isMobile && (
             <IconButton 
-              onClick={() => setDrawerOpen(true)}
+              onClick={handleOpenDrawer}
               sx={{ 
                 mr: 1.5,
                 bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
@@ -313,8 +340,9 @@ const Dashboard = () => {
       <SwipeableDrawer
         anchor="left"
         open={drawerOpen && isMobile}
-        onClose={() => setDrawerOpen(false)}
-        onOpen={() => setDrawerOpen(true)}
+        onClose={handleCloseDrawer}
+        onOpen={handleOpenDrawer}
+        disableSwipeToOpen={false}
         sx={{
           '& .MuiDrawer-paper': {
             width: '100%',
@@ -323,7 +351,16 @@ const Dashboard = () => {
           }
         }}
       >
-        <SidebarContent />
+        <SidebarContent 
+          telemetryValues={telemetryValues}
+          onTelemetryChange={handleTelemetryChange}
+          onAnalyze={handleAnalyze}
+          loading={loading}
+          isMobile={isMobile}
+          onClose={handleCloseDrawer}
+          colors={colors}
+          isDark={isDark}
+        />
       </SwipeableDrawer>
 
       {/* Main Content Area */}
@@ -332,12 +369,21 @@ const Dashboard = () => {
         {!isMobile && (
           <Box 
             sx={{ 
-              width: getSidebarWidth(), 
+              width: sidebarWidth, 
               flexShrink: 0,
               borderRight: `1px solid ${colors.sidebarBorder}`,
             }}
           >
-            <SidebarContent />
+            <SidebarContent 
+              telemetryValues={telemetryValues}
+              onTelemetryChange={handleTelemetryChange}
+              onAnalyze={handleAnalyze}
+              loading={loading}
+              isMobile={false}
+              onClose={handleCloseDrawer}
+              colors={colors}
+              isDark={isDark}
+            />
           </Box>
         )}
 
@@ -374,7 +420,7 @@ const Dashboard = () => {
                   <Button 
                     color="inherit" 
                     size="small" 
-                    onClick={() => setDrawerOpen(true)}
+                    onClick={handleOpenDrawer}
                     sx={{ fontWeight: 600 }}
                   >
                     Open
@@ -437,7 +483,7 @@ const Dashboard = () => {
                     <Button
                       variant="contained"
                       startIcon={<TuneIcon />}
-                      onClick={() => setDrawerOpen(true)}
+                      onClick={handleOpenDrawer}
                       sx={{ 
                         mt: 3,
                         background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
@@ -502,7 +548,7 @@ const Dashboard = () => {
                         variant="outlined"
                         size="small"
                         startIcon={<TuneIcon />}
-                        onClick={() => setDrawerOpen(true)}
+                        onClick={handleOpenDrawer}
                         sx={{ 
                           borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
                           color: colors.textPrimary,

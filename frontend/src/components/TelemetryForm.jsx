@@ -1,16 +1,16 @@
 /**
  * Telemetry Input Form Component
  * Allows users to adjust vehicle telemetry parameters
+ * Optimized for performance with memoization
  */
-import React from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { 
   Box, 
   Typography, 
   Button, 
   Slider, 
   Collapse,
-  IconButton,
-  useTheme
+  IconButton
 } from '@mui/material';
 import { 
   RestartAlt as ResetIcon,
@@ -26,30 +26,87 @@ import {
 import { useThemeMode } from '../context/ThemeContext';
 import { FEATURE_DEFINITIONS } from '../utils/helpers';
 
-const TelemetryForm = ({ values, onChange }) => {
-  const theme = useTheme();
-  const { isDark } = useThemeMode();
+// Memoized individual slider component to prevent unnecessary re-renders
+const FeatureSlider = memo(({ feature, value, onChange, color, isDark, colors }) => {
+  // Use local state for smooth slider movement
+  const [localValue, setLocalValue] = useState(value);
+  
+  // Sync local value when prop changes (e.g., on reset)
+  React.useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
-  const [expandedCategories, setExpandedCategories] = React.useState({
-    battery: true,
-    thermal: true,
-    motor: true,
-    braking: true,
-    usage: true,
-    overall: true
-  });
+  const handleChange = (event, newValue) => {
+    setLocalValue(newValue);
+  };
 
-  const groupedFeatures = FEATURE_DEFINITIONS.reduce((acc, feature) => {
-    if (!acc[feature.category]) {
-      acc[feature.category] = [];
-    }
-    acc[feature.category].push(feature);
-    return acc;
-  }, {});
+  const handleChangeCommitted = (event, newValue) => {
+    onChange(feature.id, newValue);
+  };
 
-  const getCategoryIcon = (category) => {
+  return (
+    <Box sx={{ mb: 2.5, '&:last-child': { mb: 0 } }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+        <Typography 
+          variant="caption" 
+          sx={{ color: colors.textSecondary, fontWeight: 500 }}
+        >
+          {feature.name}
+        </Typography>
+        <Typography 
+          variant="caption" 
+          sx={{ color: color, fontWeight: 700 }}
+        >
+          {localValue} {feature.unit}
+        </Typography>
+      </Box>
+      <Slider
+        value={localValue}
+        onChange={handleChange}
+        onChangeCommitted={handleChangeCommitted}
+        min={feature.min}
+        max={feature.max}
+        step={feature.step || 1}
+        size="small"
+        sx={{
+          color: color,
+          height: 4,
+          '& .MuiSlider-thumb': {
+            width: 14,
+            height: 14,
+            bgcolor: isDark ? 'white' : color,
+            border: `2px solid ${color}`,
+            '&:hover, &.Mui-focusVisible': {
+              boxShadow: `0 0 0 6px ${color}30`
+            }
+          },
+          '& .MuiSlider-track': {
+            bgcolor: color
+          },
+          '& .MuiSlider-rail': {
+            bgcolor: colors.sliderRail
+          }
+        }}
+      />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Typography variant="caption" sx={{ color: colors.textVeryMuted, fontSize: '0.65rem' }}>
+          {feature.min}
+        </Typography>
+        <Typography variant="caption" sx={{ color: colors.textVeryMuted, fontSize: '0.65rem' }}>
+          {feature.max}
+        </Typography>
+      </Box>
+    </Box>
+  );
+});
+
+FeatureSlider.displayName = 'FeatureSlider';
+
+// Memoized category component
+const CategoryGroup = memo(({ category, features, values, onFeatureChange, isExpanded, onToggle, isDark, colors }) => {
+  const getCategoryIcon = (cat) => {
     const iconProps = { sx: { fontSize: 18 } };
-    switch(category) {
+    switch(cat) {
       case 'battery': return <BatteryChargingFull {...iconProps} />;
       case 'thermal': return <Thermostat {...iconProps} />;
       case 'motor': return <SettingsSuggest {...iconProps} />;
@@ -59,8 +116,8 @@ const TelemetryForm = ({ values, onChange }) => {
     }
   };
 
-  const getCategoryColor = (category) => {
-    switch(category) {
+  const getCategoryColor = (cat) => {
+    switch(cat) {
       case 'battery': return '#3b82f6';
       case 'thermal': return '#f97316';
       case 'motor': return '#8b5cf6';
@@ -70,39 +127,114 @@ const TelemetryForm = ({ values, onChange }) => {
     }
   };
 
-  const getCategoryLabel = (category) => {
+  const getCategoryLabel = (cat) => {
     const labels = {
-        battery: 'Battery',
-        thermal: 'Thermal',
-        motor: 'Motor',
-        braking: 'Braking',
-        usage: 'Usage',
-        overall: 'Overall'
+      battery: 'Battery',
+      thermal: 'Thermal',
+      motor: 'Motor',
+      braking: 'Braking',
+      usage: 'Usage',
+      overall: 'Overall'
     };
-    return labels[category] || category;
+    return labels[cat] || cat;
   };
 
-  const handleReset = () => {
-    const defaults = {};
-    FEATURE_DEFINITIONS.forEach(f => {
-      defaults[f.id] = f.default;
-    });
-    onChange(defaults);
-  };
+  const color = getCategoryColor(category);
 
-  const handleSliderChange = (id) => (event, newValue) => {
-    onChange({ ...values, [id]: newValue });
-  };
+  return (
+    <Box 
+      sx={{ 
+        bgcolor: colors.cardBg,
+        borderRadius: 2,
+        border: `1px solid ${colors.cardBorder}`,
+        overflow: 'hidden'
+      }}
+    >
+      {/* Category Header */}
+      <Box 
+        onClick={() => onToggle(category)}
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          px: 2,
+          py: 1.5,
+          cursor: 'pointer',
+          '&:hover': { bgcolor: colors.hoverBg }
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box 
+            sx={{ 
+              p: 0.75, 
+              borderRadius: 1.5, 
+              bgcolor: `${color}20`,
+              color: color,
+              display: 'flex'
+            }}
+          >
+            {getCategoryIcon(category)}
+          </Box>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ color: colors.textPrimary, fontWeight: 600 }}
+          >
+            {getCategoryLabel(category)}
+          </Typography>
+        </Box>
+        <IconButton size="small" sx={{ color: colors.textVeryMuted }}>
+          {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        </IconButton>
+      </Box>
+      
+      {/* Features */}
+      <Collapse in={isExpanded}>
+        <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
+          {features.map((feature) => (
+            <FeatureSlider
+              key={feature.id}
+              feature={feature}
+              value={values[feature.id]}
+              onChange={onFeatureChange}
+              color={color}
+              isDark={isDark}
+              colors={colors}
+            />
+          ))}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+});
 
-  const toggleCategory = (category) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
+CategoryGroup.displayName = 'CategoryGroup';
 
-  // Theme-aware colors
-  const colors = {
+// Main TelemetryForm component - memoized
+const TelemetryForm = memo(({ values, onChange }) => {
+  const { isDark } = useThemeMode();
+
+  const [expandedCategories, setExpandedCategories] = useState({
+    battery: true,
+    thermal: true,
+    motor: true,
+    braking: true,
+    usage: true,
+    overall: true
+  });
+
+  // Group features by category (memoized)
+  const groupedFeatures = React.useMemo(() => {
+    return FEATURE_DEFINITIONS.reduce((acc, feature) => {
+      if (!acc[feature.category]) {
+        acc[feature.category] = [];
+      }
+      acc[feature.category].push(feature);
+      return acc;
+    }, {});
+  }, []);
+
+  // Theme-aware colors (memoized)
+  const colors = React.useMemo(() => ({
     textPrimary: isDark ? 'rgba(255,255,255,0.9)' : '#0f172a',
     textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#64748b',
     textMuted: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8',
@@ -111,7 +243,26 @@ const TelemetryForm = ({ values, onChange }) => {
     cardBorder: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     hoverBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
     sliderRail: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-  };
+  }), [isDark]);
+
+  const handleReset = useCallback(() => {
+    const defaults = {};
+    FEATURE_DEFINITIONS.forEach(f => {
+      defaults[f.id] = f.default;
+    });
+    onChange(defaults);
+  }, [onChange]);
+
+  const handleFeatureChange = useCallback((id, newValue) => {
+    onChange(prev => ({ ...prev, [id]: newValue }));
+  }, [onChange]);
+
+  const handleToggleCategory = useCallback((category) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  }, []);
 
   return (
     <Box>
@@ -134,121 +285,24 @@ const TelemetryForm = ({ values, onChange }) => {
 
       {/* Category Groups */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        {Object.entries(groupedFeatures).map(([category, features]) => {
-          const color = getCategoryColor(category);
-          const isExpanded = expandedCategories[category];
-          
-          return (
-            <Box 
-              key={category}
-              sx={{ 
-                bgcolor: colors.cardBg,
-                borderRadius: 2,
-                border: `1px solid ${colors.cardBorder}`,
-                overflow: 'hidden'
-              }}
-            >
-              {/* Category Header */}
-              <Box 
-                onClick={() => toggleCategory(category)}
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  px: 2,
-                  py: 1.5,
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: colors.hoverBg }
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box 
-                    sx={{ 
-                      p: 0.75, 
-                      borderRadius: 1.5, 
-                      bgcolor: `${color}20`,
-                      color: color,
-                      display: 'flex'
-                    }}
-                  >
-                    {getCategoryIcon(category)}
-                  </Box>
-                  <Typography 
-                    variant="subtitle2" 
-                    sx={{ color: colors.textPrimary, fontWeight: 600 }}
-                  >
-                    {getCategoryLabel(category)}
-                  </Typography>
-                </Box>
-                <IconButton size="small" sx={{ color: colors.textVeryMuted }}>
-                  {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                </IconButton>
-              </Box>
-              
-              {/* Features */}
-              <Collapse in={isExpanded}>
-                <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
-                  {features.map((feature) => (
-                    <Box key={feature.id} sx={{ mb: 2.5, '&:last-child': { mb: 0 } }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ color: colors.textSecondary, fontWeight: 500 }}
-                        >
-                          {feature.name}
-                        </Typography>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ color: color, fontWeight: 700 }}
-                        >
-                          {values[feature.id]} {feature.unit}
-                        </Typography>
-                      </Box>
-                      <Slider
-                        value={typeof values[feature.id] === 'number' ? values[feature.id] : 0}
-                        onChange={handleSliderChange(feature.id)}
-                        min={feature.min}
-                        max={feature.max}
-                        step={feature.step || 1}
-                        size="small"
-                        sx={{
-                          color: color,
-                          height: 4,
-                          '& .MuiSlider-thumb': {
-                            width: 14,
-                            height: 14,
-                            bgcolor: isDark ? 'white' : color,
-                            border: `2px solid ${color}`,
-                            '&:hover, &.Mui-focusVisible': {
-                              boxShadow: `0 0 0 6px ${color}30`
-                            }
-                          },
-                          '& .MuiSlider-track': {
-                            bgcolor: color
-                          },
-                          '& .MuiSlider-rail': {
-                            bgcolor: colors.sliderRail
-                          }
-                        }}
-                      />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: colors.textVeryMuted, fontSize: '0.65rem' }}>
-                          {feature.min}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: colors.textVeryMuted, fontSize: '0.65rem' }}>
-                          {feature.max}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
-              </Collapse>
-            </Box>
-          );
-        })}
+        {Object.entries(groupedFeatures).map(([category, features]) => (
+          <CategoryGroup
+            key={category}
+            category={category}
+            features={features}
+            values={values}
+            onFeatureChange={handleFeatureChange}
+            isExpanded={expandedCategories[category]}
+            onToggle={handleToggleCategory}
+            isDark={isDark}
+            colors={colors}
+          />
+        ))}
       </Box>
     </Box>
   );
-};
+});
+
+TelemetryForm.displayName = 'TelemetryForm';
 
 export default TelemetryForm;
